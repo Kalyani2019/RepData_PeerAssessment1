@@ -1,0 +1,91 @@
+---
+title: "Reproducible Research"
+author: "Kalyani Tholeti"
+date: "1/8/2022"
+output: html_document
+---
+
+```{r}
+#Loading and pre-processing the data
+data <-read.csv("C:/Users/vvkal/OneDrive/Documents/MBA/DataScience-Capstone/Reproducible_Research_data_activity/activity.csv")
+```
+
+#What is mean total number of steps taken per day?
+#For this part of the assignment, you can ignore the missing values in the dataset.
+#Calculate and report the mean and median total number of steps taken per day
+```{r}
+stepsByDay <- tapply(data$steps, data$date, sum, na.rm=TRUE)
+stepsByDayMean <- mean(stepsByDay)
+stepsByDayMedian <- median(stepsByDay)
+```
+
+#Make a histogram of the total number of steps taken each day
+
+```{r}
+library("dplyr")
+library("ggplot2")
+```
+
+```{r}
+qplot(stepsByDay, xlab='Total steps per day', ylab='Frequency using binwith 500', binwidth=500)
+```
+
+```{r}
+#What is the average daily activity pattern?
+avgStepsPerTimeBlock <- aggregate(x=list(meanSteps=data$steps), by=list(interval=data$interval), FUN=mean, na.rm=TRUE)
+#Time- series
+ggplot(data=avgStepsPerTimeBlock, aes(x=interval, y=meanSteps)) +
+    geom_line() +
+    xlab("5-minute interval") +
+    ylab("average number of steps taken") 
+```
+
+```{r}
+#Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+mostSteps <- which.max(avgStepsPerTimeBlock$meanSteps)
+timeMostSteps <-  gsub("([0-9]{1,2})([0-9]{2})", "\\1:\\2", avgStepsPerTimeBlock[mostSteps,'interval'])
+```
+
+
+```{r}
+#Imputing missing values
+#Calculate and report the total number of missing values in the dataset
+numMissingValues <- length(which(is.na(data$steps)))
+print(numMissingValues)
+#Number of missing values: 2304
+```
+
+#2. Devise a strategy for filling in all of the missing values in the dataset.
+#Steps column has NA values that need to be imputed
+#Missing values can be imputed either with mean, median, most_frequent or constant data
+#Here we will use mean
+#3. Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+```{r}
+dataImputed <- data
+dataImputed$steps[is.na(dataImputed$steps)] <- mean(dataImputed$steps, na.rm = TRUE)
+```
+
+```{r}
+#4. Make a histogram of the total number of steps taken each day
+stepsByDayImputed <- tapply(dataImputed$steps, dataImputed$date, sum)
+qplot(stepsByDayImputed, xlab='Total steps per day (Imputed)', ylab='Frequency using binwith 500', binwidth=500)
+```
+
+#Are there differences in activity patterns between weekdays and weekends?
+```{r}
+dataImputed$dateType <-  ifelse(as.POSIXlt(dataImputed$date)$wday %in% c(0,6), 'weekend', 'weekday')
+```
+
+#Make a panel plot containing a time series plot
+
+```{r}
+averagedActivityDataImputed <- aggregate(steps ~ interval + dateType, data=dataImputed, mean)
+
+ggplot(averagedActivityDataImputed, aes(interval, steps)) + 
+    geom_line() + 
+    facet_grid(dateType ~ .) +
+    xlab("5-minute interval") + 
+    ylab("avarage number of steps")
+
+```
